@@ -1,0 +1,16 @@
+DIN "TYG"
+DDM M
+SEE 0
+LEN NEW
+GBL NUM ^CV_BACKEND_STARTUP_SEQUENCE; ^CV_BACKEND_STARTUP_SEQUENCE == 1
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\lens_rms0.3.seq";GO
+CD "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\"
+in "zernike_extractor.seq"
+buf lis
+eva(buf.num i462 j3)
+eva(buf.num i462 j2)
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+EXI Y

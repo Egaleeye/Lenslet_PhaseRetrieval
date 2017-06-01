@@ -1,0 +1,34 @@
+DIN "TYG"
+DDM M
+SEE 0
+LEN NEW
+GBL NUM ^CV_BACKEND_STARTUP_SEQUENCE; ^CV_BACKEND_STARTUP_SEQUENCE == 1
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\lens_rms0.3.seq";GO
+buf yes
+PMA; CAN;
+PMA
+ZRN  10 5
+GO
+buf no
+buf lis b0
+buf fnd 'Order'
+eva(buf.i)
+eva(buf.j)
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+buf lis b0
+eva(buf.i)
+help buf
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+run "C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\GBpapersim\zernike_extractor.seq";GO
+buf lis
+EXI Y

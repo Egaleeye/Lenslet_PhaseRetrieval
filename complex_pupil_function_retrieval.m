@@ -1,0 +1,174 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Created by Tianyi Yang 052617
+% 
+% This program is an implement of multiheight phase retrieval algorithm in
+% Gregory Brady et al. "Nonlinear optimization algorithm for retrieving the
+% full complex pupil function"
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clear; clc; close all
+global spopath
+spopath = path(path,'C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution');
+path(path,'C:\Users\Chopin\OneDrive\ARPAE\Testing\Shack-Hartmann superresolution\zernike'); %zernike polynomial generator
+
+step = 128;
+% generate the pupil aberration as a phase obj (call zernike from codev?)
+pupildiameter = 2; %for generation of zernike, r should be relative pupil coord
+% eqres = pupildiameter/step; %equivalent resolution
+xedge = linspace(-pupildiameter/2, pupildiameter/2,step); %for convenience use 256 points
+
+[X, Y] = meshgrid(xedge, -xedge);
+r = sqrt(X.^2+Y.^2); %convert to angular coordinate
+r(r > 1) = 0;
+theta = atan2(Y,X);
+% figure; imshow(r,[]);
+r = reshape(r,1,step^2);
+theta = reshape(theta,1,step^2);
+
+
+% %       [theta,r] = cart2pol(X,Y);
+% %       idx = r<=1;
+% %       p = 0:15;
+% %       z = nan(size(X));
+% %       y = zernfun2(p,r(idx),theta(idx));
+% %       figure('Units','normalized')
+% figure; imshow(r,[]);
+
+
+pupil_wfr_zernike = dlmread('pupil_wfr_zernike.dat');
+%       n    m    Zernike function             Normalization
+%       ----------------------------------------------------
+%       0    0    1                              1/sqrt(pi)
+%       1    1    r * cos(theta)                 2/sqrt(pi)
+%       1   -1    r * sin(theta)                 2/sqrt(pi)
+%       2    2    r^2 * cos(2*theta)             sqrt(6/pi)
+%       2    0    (2*r^2 - 1)                    sqrt(3/pi)
+%       2   -2    r^2 * sin(2*theta)             sqrt(6/pi)
+%       3    3    r^3 * cos(3*theta)             sqrt(8/pi)
+%       3    1    (3*r^3 - 2*r) * cos(theta)     sqrt(8/pi)
+%       3   -1    (3*r^3 - 2*r) * sin(theta)     sqrt(8/pi)
+%       3   -3    r^3 * sin(3*theta)             sqrt(8/pi)
+pupil_wfr = zeros(step^2,1);
+for i = 1:length(pupil_wfr_zernike)
+    pupil_wfr = pupil_wfr + pupil_wfr_zernike(i)*zernfun2(i-1,r,theta); %note the notation of zernike index is different
+end
+pupil_wfr = reshape(pupil_wfr,step,step);
+pupil_display = imresize(pupil_wfr,4);
+figure; imshow(pupil_display,[]); colormap jet; title('pupil aberration'); colorbar;
+
+
+%% padding
+% %add a piston to bring background to zero
+% pupil_wfr = pupil_wfr-pupil_wfr(1,1);
+
+%padding. This should be the phase of pupil function
+
+pupil_phase = padarray(pupil_wfr,[step/2 step/2],'replicate','both');
+% figure; imshow(simpupil,[]);
+
+%create the complex pupil function
+pupil_amp = (X.^2+Y.^2 <= 1);
+pupil_amp =  padarray(pupil_amp, [step/2 step/2],'replicate','both');
+% figure; imshow(pupil_amp,[])
+
+pupil = pupil_amp.*exp(1i*2*pi*pupil_phase);
+figure; subplot(1,2,1); imshow(abs(pupil),[]); title('pupil amplitude');
+subplot(1,2,2); imshow(angle(pupil),[]); title('pupil phase');
+
+%% angular spectrum propagation
+simsize = length(pupil); %number of pixels in pupil plane
+wvl = 587.56e-6; %in [mm]
+f = 100; %focal length
+% dp = 5e-3; %5 micron detector pixel pitch
+dm = 20/simsize; % the whole object, with padding is 20 mm.
+objlength = simsize*dm;
+dp = wvl*f/objlength;
+detectorlength = simsize*dp;
+
+m = -round(simsize/2):round(simsize/2)-1;
+[M,N] = meshgrid(m,-m);
+R2 = M.^2+N.^2;
+
+farfield = exp(1i*pi/(wvl*f)*(R2*dp^2)).*fftshift(fftn(fftshift(pupil))); %show farfield spot
+figure; subplot(1,2,1); imshow(abs(farfield),[]); title('farfield spot');
+subplot(1,2,2); plot((1:256)*dp,abs(farfield(128,:)));pbaspect([1 1 1]); title('spot slice')
+%% back propagation
+
+z1 = -1; %needs to be close especially for fast optical systems because of sampling
+z2 = -5;
+MasterPlane = angspecprop(farfield, simsize, wvl, detectorlength, z1);
+SlavePlane = angspecprop(farfield, simsize, wvl, detectorlength, z2);
+MeasuredMasterAmp = abs(MasterPlane);
+MeasuredSlaveAmp = abs(SlavePlane);
+figure; 
+subplot(2,2,1); imshow(MeasuredMasterAmp,[]); title('Master');
+subplot(2,2,2); imshow(MeasuredSlaveAmp,[]); title('Slave'); 
+subplot(2,2,3); imshow(angle(MasterPlane),[]); title('Master Phase');
+subplot(2,2,4); imshow(angle(SlavePlane),[]); title('Slave Phase');
+%% Now is the phase retrieval section
+
+% first, assume a phase in pupil plane. and propagate to designated planes
+MeasuredPupil = pupil_amp;
+PupilPhaseGuess = pupil_amp; %pupil phase initial guess;
+ComplexPupilGuess = MeasuredPupil.*exp(1i*2*pi*PupilPhaseGuess);
+
+simsize = length(MeasuredPupil); %number of pixels in pupil plane
+wvl = 587.56e-6; %in [mm]
+f = 100; %focal length
+% dp = 5e-3; %5 micron detector pixel pitch
+dm = 20/simsize; % the whole object, with padding is 20 mm.
+objlength = simsize*dm;
+dp = wvl*f/objlength;
+detectorlength = simsize*dp;
+
+m = -round(simsize/2):round(simsize/2)-1;
+[M,N] = meshgrid(m,-m);
+R2 = M.^2+N.^2;
+
+farfield = exp(1i*pi/(wvl*f)*(R2*dp^2)).*fftshift(fftn(fftshift(ComplexPupilGuess))); %show farfield spot
+figure; subplot(1,2,1); imshow(abs(farfield),[]); title('farfield guess');
+subplot(1,2,2); plot((1:256)*dp,abs(farfield(128,:)));pbaspect([1 1 1]); title('spot slice')
+
+% propagate to designated planes and compare amplitude and phase
+z1 = -1; %needs to be close especially for fast optical systems because of sampling
+z2 = -5;
+MasterPlaneGuess = angspecprop(farfield, simsize, wvl, detectorlength, z1);
+SlavePlaneGuess = angspecprop(farfield, simsize, wvl, detectorlength, z2);
+figure; 
+subplot(2,2,1); imshow(abs(MasterPlaneGuess),[]); title('Master Guess');
+subplot(2,2,2); imshow(abs(SlavePlaneGuess),[]); title('Slave Guess'); 
+subplot(2,2,3); imshow(angle(MasterPlaneGuess),[]); title('Master Phase');
+subplot(2,2,4); imshow(angle(SlavePlaneGuess),[]); title('Slave Phase');
+
+%% Phase Retrieval Part
+%known: pupil amplitude, intensity at Master and Slave Plane, and two
+%guesses of phase in those planes.
+%want to retrieve: phase in the Master and Slave Plane, and ultimately
+%phase in pupil plane.
+
+zdiff = z2-z1;
+iter = 10;
+ErrorMetric = zeros(iter,1);
+
+for i = 1:iter
+    ReplacedMaster = MeasuredMasterAmp.*MasterPlaneGuess./abs(MasterPlaneGuess); %replace intensity
+    SlavePlaneGuess = angspecprop(ReplacedMaster, simsize, wvl, detectorlength, zdiff); %propagate to slave plane
+    
+    ErrorMetric(i) = sqrt(mean(mean((abs(SlavePlaneGuess)-MeasuredSlaveAmp).^2)));
+    
+    ReplacedSlave = MeasuredSlaveAmp.*SlavePlaneGuess./abs(SlavePlaneGuess); %replace intensity
+    MasterPlaneGuess = angspecprop(ReplacedSlave, simsize, wvl, detectorlength, -zdiff); %propagate to master plane as guess
+    
+end
+
+figure; plot(ErrorMetric); xlabel('Number of Iteration'); ylabel('RMS error')
+
+PupilRecovered = ifftshift(ifftn(ifftshift(MasterPlaneGuess.*exp(-1i*pi/(wvl*f)*(R2*dp^2))))).*MeasuredPupil;
+figure; 
+subplot(2,2,1); imshow(abs(pupil),[]); title('pupil amplitude'); ylabel('Simulation result');
+subplot(2,2,2); imshow(angle(pupil),[]); title('pupil phase'); colorbar;
+subplot(2,2,3); imshow(abs(PupilRecovered),[]);ylabel('Retrieved result');
+subplot(2,2,4); imshow(angle(PupilRecovered),[]); colorbar;
+
+
+

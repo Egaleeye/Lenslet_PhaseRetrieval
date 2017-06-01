@@ -1,0 +1,21 @@
+!extract zernike coeffiencts
+ver yes;
+buf yes;
+pma; zrn 10 5; go
+buf no;
+
+buf fnd 'Order'
+ope U^file pupil_wfr_zernike.dat
+^cr == (buf.i); !the row and column with word 'Order'
+wri U^file (buf.num b0 i^cr+2 j3)
+wri U^file (buf.num b0 i^cr+4 j3)
+wri U^file (buf.num b0 i^cr+5 j2)
+wri U^file (buf.num b0 i^cr+7 j3)
+wri U^file (buf.num b0 i^cr+8 j2)
+wri U^file (buf.num b0 i^cr+9 j2)
+wri U^file (buf.num b0 i^cr+11 j3)
+wri U^file (buf.num b0 i^cr+12 j2)
+wri U^file (buf.num b0 i^cr+13 j2)
+wri U^file (buf.num b0 i^cr+14 j2)
+
+clo U^file
